@@ -1,5 +1,6 @@
 package org.acme.reservation.rest;
 
+import io.quarkus.logging.Log;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -9,8 +10,11 @@ import jakarta.ws.rs.core.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.acme.reservation.inventory.Car;
 import org.acme.reservation.inventory.InventoryClient;
+import org.acme.reservation.rental.Rental;
+import org.acme.reservation.rental.RentalClient;
 import org.acme.reservation.reservation.Reservation;
 import org.acme.reservation.reservation.ReservationsRepository;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.resteasy.reactive.RestQuery;
 
 import java.time.LocalDate;
@@ -26,6 +30,9 @@ public class ReservationResource {
 
     private final ReservationsRepository reservationsRepository;
     private final InventoryClient inventoryClient;
+
+    @RestClient
+    private final RentalClient rentalClient;
 
     @GET
     @Path("availability")
@@ -54,6 +61,15 @@ public class ReservationResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @POST
     public Reservation make(Reservation reservation) {
-        return reservationsRepository.save(reservation);
+        Reservation result = reservationsRepository.save(reservation);
+
+        // dummy value for the time being
+        String userId = "x";
+        if(reservation.getStartDay().equals(LocalDate.now())) {
+            Rental rental = rentalClient.start(userId, result.getId());
+            Log.info("Rental started: " + rental);
+        }
+
+        return result;
     }
 }
