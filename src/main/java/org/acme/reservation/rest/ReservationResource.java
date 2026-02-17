@@ -1,0 +1,59 @@
+package org.acme.reservation.rest;
+
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import lombok.RequiredArgsConstructor;
+import org.acme.reservation.inventory.Car;
+import org.acme.reservation.inventory.InventoryClient;
+import org.acme.reservation.reservation.Reservation;
+import org.acme.reservation.reservation.ReservationsRepository;
+import org.jboss.resteasy.reactive.RestQuery;
+
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Path("/reservation")
+@Produces(MediaType.APPLICATION_JSON)
+@RequiredArgsConstructor
+public class ReservationResource {
+
+    private final ReservationsRepository reservationsRepository;
+    private final InventoryClient inventoryClient;
+
+    @GET
+    @Path("availability")
+    public Collection<Car> availability(@RestQuery LocalDate startDate, @RestQuery LocalDate endDate) {
+        // obtain all cars from inventory
+        List<Car> availableCars = inventoryClient.allCars();
+
+        // create a map from did to car
+        Map<Long, Car> carsById = new HashMap<>();
+        for (Car car : availableCars) {
+            carsById.put(car.getId(), car);
+        }
+
+        // get all current reservations
+        List<Reservation> reservations = reservationsRepository.findAll();
+        // for each reservation, remove the car from the map
+        for (Reservation reservation : reservations) {
+            if(reservation.isReserved(startDate, endDate)) {
+                carsById.remove(reservation.getCarId());
+            }
+        }
+
+        return carsById.values();
+    }
+
+    @Consumes(MediaType.APPLICATION_JSON)
+    @POST
+    public Reservation make(Reservation reservation) {
+        return reservationsRepository.save(reservation);
+    }
+}
