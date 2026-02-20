@@ -1,6 +1,7 @@
 package org.acme.reservation.rest;
 
 import io.quarkus.logging.Log;
+import io.smallrye.graphql.client.GraphQLClient;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -9,7 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.acme.reservation.inventory.Car;
-import org.acme.reservation.inventory.InventoryClient;
+import org.acme.reservation.inventory.GraphQLInventoryClient;
 import org.acme.reservation.rental.Rental;
 import org.acme.reservation.rental.RentalClient;
 import org.acme.reservation.reservation.Reservation;
@@ -29,16 +30,18 @@ import java.util.Map;
 public class ReservationResource {
 
     private final ReservationsRepository reservationsRepository;
-    private final InventoryClient inventoryClient;
 
     @RestClient
     private final RentalClient rentalClient;
+
+    @GraphQLClient("inventory")
+    private final GraphQLInventoryClient graphQLInventoryClient;
 
     @GET
     @Path("availability")
     public Collection<Car> availability(@RestQuery LocalDate startDate, @RestQuery LocalDate endDate) {
         // obtain all cars from inventory
-        List<Car> availableCars = inventoryClient.allCars();
+        List<Car> availableCars = graphQLInventoryClient.allCars();
 
         // create a map from did to car
         Map<Long, Car> carsById = new HashMap<>();
